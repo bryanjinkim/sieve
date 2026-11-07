@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sieve import ledger  # noqa: E402
 from sieve.config import Config, load_config  # noqa: E402
-from sieve.outline import format_outline, outline_lines, read_head  # noqa: E402
+from sieve.outline import format_outline, limit_entries, outline_lines, read_head  # noqa: E402
 from sieve.tokens import estimate_tokens  # noqa: E402
 
 QUICK_ALLOW_BYTES_PER_TOKEN = 1.5
@@ -52,6 +52,7 @@ SKIP_EXTENSIONS = {
 }
 
 GUARD_DIR = "guard"
+MAX_OUTLINE_ENTRIES = 80
 
 
 def _denials_path(data_root: str, session_id: str) -> str:
@@ -121,14 +122,17 @@ def handle(event: Dict[str, Any], cfg: Config, data_root: str) -> Optional[Dict[
         return None
 
     total = len(lines)
-    entries = outline_lines(lines, ext)
+    found = outline_lines(lines, ext, max_entries=10**9)
+    entries = limit_entries(found, MAX_OUTLINE_ENTRIES)
+    partial = "" if len(entries) == len(found) else \
+        f", {len(entries)} of {len(found)} entries spread across the file; Grep for a name to find the rest"
     more = "" if total <= READ_DEFAULT_LINES else \
         f" A whole-file read would only show the first {READ_DEFAULT_LINES:,} lines anyway."
     reason = (
         f"[sieve] {os.path.basename(path)} has {total:,} lines (~{read_cost:,} tokens to read), "
         f"over the {budget:,}-token read budget.{more} Read only the part you need with "
         f"offset/limit, or Grep for it.\n"
-        + (f"Outline (line: text):\n{format_outline(entries)}\n" if entries else "")
+        + (f"Outline (line: text{partial}):\n{format_outline(entries)}\n" if entries else "")
         + "If you really need the whole file, request the same read again and it will be allowed."
     )
 

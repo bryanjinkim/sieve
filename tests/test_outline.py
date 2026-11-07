@@ -56,6 +56,17 @@ class OutlineTest(unittest.TestCase):
         self.assertTrue(all(t.startswith("class") for _, t in entries))
         self.assertEqual([n for n, _ in entries], sorted(n for n, _ in entries))
 
+    def test_truncated_outline_covers_the_whole_file(self):
+        src = []
+        for i in range(300):
+            src += [f"def f{i}():", "    pass", ""]
+        entries = outline_lines(src, ".py", max_entries=30)
+        self.assertEqual(len(entries), 30)
+        self.assertEqual(entries[0][1], "def f0():")
+        self.assertEqual(entries[-1][1], "def f299():")
+        gaps = [b[0] - a[0] for a, b in zip(entries, entries[1:])]
+        self.assertLess(max(gaps) - min(gaps), 6)  # evenly spaced
+
     def test_long_lines_are_shortened(self):
         (_, text), = outline_lines(["def f(" + "a, " * 100 + "):"], ".py")
         self.assertLessEqual(len(text), 125)

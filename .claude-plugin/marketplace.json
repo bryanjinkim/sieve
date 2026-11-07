@@ -1,0 +1,17 @@
+{
+  "name": "sieve",
+  "description": "Sieve: a Claude Code plugin that cuts token usage by filtering noisy tool output.",
+  "owner": {
+    "name": "Bryan Kim",
+    "url": "https://github.com/bryanjinkim"
+  },
+  "plugins": [
+    {
+      "name": "sieve",
+      "source": "./",
+      "description": "Compresses noisy command output, guards large file reads, tracks a session token budget, and reports savings.",
+      "category": "productivity",
+      "tags": ["tokens", "context", "cost"]
+    }
+  ]
+}

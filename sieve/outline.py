@@ -70,6 +70,35 @@ def _indent(line: str) -> int:
     return len(line) - len(line.lstrip(" \t"))
 
 
+def _spread(items: List[Entry], k: int) -> List[Entry]:
+    """Pick ``k`` items evenly spaced across the list (always the first and last)."""
+    if k >= len(items):
+        return list(items)
+    if k == 1:
+        return [items[0]]
+    step = (len(items) - 1) / (k - 1)
+    return [items[round(i * step)] for i in range(k)]
+
+
+def limit_entries(entries: List[Entry], k: int) -> List[Entry]:
+    """Choose ``k`` entries: shallowest levels first, each level spread evenly.
+
+    Taking simply the first ``k`` would only describe the top of the file. A
+    3,000-line module with 300 functions would show its first 700 lines and
+    nothing else. Spreading the picks keeps the outline a map of the whole file.
+    """
+    by_level: dict = {}
+    for e in entries:
+        by_level.setdefault(_indent(e[1]), []).append(e)
+    chosen: List[Entry] = []
+    for level in sorted(by_level):
+        room = k - len(chosen)
+        if room <= 0:
+            break
+        chosen += _spread(by_level[level], room)
+    return sorted(chosen)
+
+
 def outline_lines(lines: List[str], extension: str, max_entries: int = 80) -> List[Entry]:
     """Return outline entries for ``lines`` of a file with ``extension``."""
     pattern = _BY_EXTENSION.get(extension.lower())
@@ -86,9 +115,7 @@ def outline_lines(lines: List[str], extension: str, max_entries: int = 80) -> Li
                    if l.strip() and _indent(l) == 0 and not l.lstrip().startswith(("}", ")", "]"))]
 
     if len(entries) > max_entries:
-        # Keep the shallowest (top-level) entries, then restore file order.
-        ranked = sorted(entries, key=lambda e: (_indent(e[1]), e[0]))[:max_entries]
-        entries = sorted(ranked)
+        entries = limit_entries(entries, max_entries)
 
     return [(n, t if len(t) <= MAX_LINE_CHARS else t[:MAX_LINE_CHARS] + " ...") for n, t in entries]
 
