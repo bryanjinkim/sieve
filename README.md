@@ -53,6 +53,15 @@ Other switches:
 
 Invalid settings never break anything. They're skipped with a warning, and the default is used instead.
 
+## Known limitations
+
+- **Only successful commands are compressed.** When a command exits with a non-zero code (for
+  example, a test run with failures), Claude Code fires `PostToolUseFailure`, which can add
+  context but can't replace output. Claude Code shortens very long failure output on its own.
+  An opt-in wrapper that would cover failures is planned as an experiment.
+- **Token counts are estimates.** On real session data they come within about 25% of the real count
+  (see `sieve/tokens.py`).
+
 ## Status
 
 Work in progress. Built step by step.
