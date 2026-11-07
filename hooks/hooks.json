@@ -8,7 +8,9 @@
           {
             "type": "command",
             "command": "python3",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/pre_read.py"],
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/pre_read.py"
+            ],
             "timeout": 10
           }
         ]
@@ -21,7 +23,23 @@
           {
             "type": "command",
             "command": "python3",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/post_tool.py"],
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/post_tool.py"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/prompt_check.py"
+            ],
             "timeout": 10
           }
         ]
