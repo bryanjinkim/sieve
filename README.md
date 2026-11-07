@@ -25,6 +25,34 @@ sieve/
 └── pyproject.toml               makes the library pip-installable on its own
 ```
 
+## Configuration
+
+Each resource has its own token budget. Output under its budget passes through untouched; output
+over it is compressed to fit.
+
+| Setting | Default | What it limits |
+|---|---|---|
+| `budgets.bash_output` | 2500 | output of one shell command |
+| `budgets.grep_output` | 2500 | results of one search |
+| `budgets.mcp_output` | 4000 | output of one MCP (connected) tool call |
+| `budgets.file_read` | 10000 | a whole-file read; larger files get an outline instead |
+| `budgets.session_context` | 150000 | the whole conversation; Sieve warns at `session.warn_at` (80%) |
+
+Override any of them in `~/.claude/sieve.json` (all projects) or `<project>/.claude/sieve.json`
+(one project). List only what you change:
+
+```json
+{ "budgets": { "bash_output": 4000 } }
+```
+
+Other switches:
+
+- **Skip compression for one command:** add `# sieve:off` to the end of the command.
+- **Turn Sieve off for a session:** start Claude Code with `SIEVE_OFF=1`.
+- **See the settings in effect:** `python3 -m sieve.config`, run from the plugin folder.
+
+Invalid settings never break anything. They're skipped with a warning, and the default is used instead.
+
 ## Status
 
 Work in progress. Built step by step.

@@ -1,0 +1,28 @@
+{
+  "enabled": true,
+
+  "budgets": {
+    "bash_output": 2500,
+    "grep_output": 2500,
+    "mcp_output": 4000,
+    "file_read": 10000,
+    "session_context": 150000
+  },
+
+  "compress": {
+    "head": 15,
+    "tail": 40,
+    "context": 2,
+    "max_line_chars": 400
+  },
+
+  "session": {
+    "warn_at": 0.8
+  },
+
+  "save_full_output": true,
+
+  "passthrough_patterns": [
+    "#\\s*sieve:\\s*off"
+  ]
+}
