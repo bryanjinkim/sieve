@@ -1,4 +1,18 @@
 {
-  "description": "Sieve token-saving hooks (filled in as each step is built)",
-  "hooks": {}
+  "description": "Sieve token-saving hooks",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/post_tool.py"],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
 }
