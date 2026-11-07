@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sieve-tokens"
+version = "0.1.0"
+description = "Token-saving text compression and budgeting for LLM tool output"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = []  # standard library only, on purpose: hooks must start fast
+
+[tool.setuptools]
+packages = ["sieve"]

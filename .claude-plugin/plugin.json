@@ -1,0 +1,11 @@
+{
+  "name": "sieve",
+  "displayName": "Sieve",
+  "version": "0.1.0",
+  "description": "Cuts Claude Code token usage by filtering noisy tool output, guarding large file reads, and tracking a per-session token budget.",
+  "author": {
+    "name": "Bryan Kim"
+  },
+  "license": "MIT",
+  "keywords": ["tokens", "context", "compression", "cost", "optimization"]
+}
