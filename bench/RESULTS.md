@@ -52,3 +52,31 @@ Cost: $0.216 baseline vs $0.208 with Sieve (median per task, summed).
 
 **Changes after run 2:** when `persistedOutputPath` is present, Sieve compresses the **full** saved
 output instead of the preview, and points Claude at Claude Code's own saved copy.
+
+## Run 3: 2026-11-06, Sonnet, build task only, 4 sessions (`results/20261106-202022.json`)
+
+After making Sieve compress Claude Code's saved full output instead of its 30,000-character preview.
+
+| Task | Baseline | Sieve | Change | Turns (baseline → Sieve) | Cost (median) | Correct |
+|---|---:|---:|---:|---|---|---|
+| build | 220k | 145k | **-34%** | 8, 6 → 4, 4 | $0.097 → $0.076 (-22%) | 4/4 |
+
+The ledger shows the hook compressing the full saved log from **~48,100 to ~1,100 tokens**. Both
+warnings and the artifact size were in the compressed output, so Claude answered in 4 turns instead of 6–8.
+
+## Summary: latest result per task
+
+| Task | Baseline | Sieve | Change | From |
+|---|---:|---:|---:|---|
+| build | 220k | 145k | -34% | run 3 |
+| tests | 106k | 70k | -34% | run 2 |
+| find | 69k | 70k | +1% | run 2 |
+| **All three** | **395k** | **285k** | **-28%** | |
+
+Answers were correct in every run of every round (28/28). Cost fell less than tokens (about -12%
+across the three tasks), because most input is read from Claude Code's prompt cache, which is much
+cheaper than fresh input.
+
+Caveats: two runs per arm, one model (Sonnet), one synthetic project. The run 3 change doesn't affect
+the tests and find tasks (their output stayed under the preview limit), which is why their run 2
+numbers are used.

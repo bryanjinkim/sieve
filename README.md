@@ -18,6 +18,30 @@ logs, test runs and whole files. Sieve sits between the tools and Claude and:
 See [docs/recommended-settings.md](docs/recommended-settings.md) for built-in Claude Code limits
 that work well alongside Sieve.
 
+## Results
+
+Measured in real headless Claude Code sessions (Sonnet), with and without Sieve, on a project with
+a noisy build, a verbose test suite and a 3,000-line module ([bench/RESULTS.md](bench/RESULTS.md)):
+
+| Task | Without Sieve | With Sieve | Change |
+|---|---:|---:|---:|
+| Find the warnings in a 1,500-line build log | 220k tokens | 145k | **-34%** |
+| Summarize a 500-test verbose run | 106k | 70k | **-34%** |
+| Look up one function in a large file | 69k | 70k | +1% |
+| **All three** | 395k | 285k | **-28%** |
+
+All answers were correct with and without Sieve (28/28 across three rounds). The savings come as
+much from **fewer turns** as from shorter output: each turn re-reads the whole conversation, so a
+compressed log that holds the answer saves several round trips.
+
+## Install
+
+```
+/plugin install sieve --marketplace bryanjinkim/sieve
+```
+
+Or try it from a local copy without installing: `claude --plugin-dir /path/to/sieve`.
+
 ## Layout
 
 ```
@@ -68,9 +92,18 @@ Invalid settings never break anything. They're skipped with a warning, and the d
   example, a test run with failures), Claude Code fires `PostToolUseFailure`, which can add
   context but can't replace output. Claude Code shortens very long failure output on its own.
   An opt-in wrapper that would cover failures is planned as an experiment.
+- **Some tasks don't benefit.** When Claude Grep-searches before reading, as it usually does,
+  the large-file guard has nothing to do, and the session-start tips add about 1% overhead.
+- **Benchmarked on one model and one synthetic project**, two runs per arm. Real projects will vary.
 - **Token counts are estimates.** On real session data they come within about 25% of the real count
   (see `sieve/tokens.py`).
 
+## Debugging
+
+Hooks never break a session: on any error they step aside and Claude sees the original output.
+Errors are still logged to `hooks.log` in the plugin's data folder. Start Claude Code with
+`SIEVE_DEBUG=1` to also log each hook call's command and output size (never the contents).
+
 ## Status
 
-Work in progress. Built step by step.
+v0.1.0. Working and benchmarked. Built step by step; see the commit history.

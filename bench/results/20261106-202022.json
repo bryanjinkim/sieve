@@ -1,0 +1,104 @@
+[
+  {
+    "task": "build",
+    "arm": "baseline",
+    "seconds": 25.9,
+    "turns": 8,
+    "input": 14,
+    "cache_read": 242773,
+    "cache_write": 15496,
+    "output": 1826,
+    "cost_usd": 0.10454930000000001,
+    "correct": true,
+    "answer": "Built `dist/shop-1.4.0.whl`, which is 2.4 MB.\nIt printed two warnings: W104 (deprecated `Decimal.quantize(rounding=None)` in `shop/billing/module_77.py:41`) and W221 (unused import `fuzzy` in `shop/search/module_12.py:3`).",
+    "is_error": false,
+    "processed": 258283,
+    "session_id": "ce3d54d2-5e3d-4ea2-8716-1483a9147bb0",
+    "sieve_events": 0,
+    "hook_calls": []
+  },
+  {
+    "task": "build",
+    "arm": "sieve",
+    "seconds": 11.4,
+    "turns": 4,
+    "input": 8,
+    "cache_read": 130799,
+    "cache_write": 14085,
+    "output": 714,
+    "cost_usd": 0.0765759,
+    "correct": true,
+    "answer": "Built `dist/shop-1.4.0.whl`, 2.4 MB.\nWarning codes: W104 (deprecated `Decimal.quantize(rounding=None)` in `shop/billing/module_77.py:41`) and W221 (unused import `fuzzy` in `shop/search/module_12.py:3`).",
+    "is_error": false,
+    "processed": 144892,
+    "session_id": "d9bb413e-b223-4e7e-bd48-61a6ee95b3e3",
+    "sieve_events": 1,
+    "hook_calls": [
+      {
+        "tool": "Bash",
+        "command": "./build.sh",
+        "response": {
+          "stdout": "str[30000]",
+          "stderr": "str[0]",
+          "interrupted": "bool",
+          "isImage": "bool",
+          "noOutputExpected": "bool",
+          "persistedOutputPath": "str[186]",
+          "persistedOutputSize": "int"
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "task": "build",
+    "arm": "baseline",
+    "seconds": 18.8,
+    "turns": 6,
+    "input": 10,
+    "cache_read": 167370,
+    "cache_write": 14679,
+    "output": 1315,
+    "cost_usd": 0.088623,
+    "correct": true,
+    "answer": "Artifact: `dist/shop-1.4.0.whl`, 2.4 MB (built in 18.2s).\nWarning codes: W104 (deprecated `Decimal.quantize(rounding=None)`, `shop/billing/module_77.py:41`) and W221 (unused import `fuzzy`, `shop/search/module_12.py:3`).",
+    "is_error": false,
+    "processed": 182059,
+    "session_id": "dd7418cb-34fc-49b8-8f82-49dac1f2fc8b",
+    "sieve_events": 0,
+    "hook_calls": []
+  },
+  {
+    "task": "build",
+    "arm": "sieve",
+    "seconds": 11.5,
+    "turns": 4,
+    "input": 8,
+    "cache_read": 130806,
+    "cache_write": 14043,
+    "output": 671,
+    "cost_usd": 0.07597860000000002,
+    "correct": true,
+    "answer": "Artifact: `dist/shop-1.4.0.whl`, 2.4 MB.\nWarning codes: W104 and W221.",
+    "is_error": false,
+    "processed": 144857,
+    "session_id": "b9646de0-dd86-4d7c-9073-853f12c20ab8",
+    "sieve_events": 1,
+    "hook_calls": [
+      {
+        "tool": "Bash",
+        "command": "./build.sh",
+        "response": {
+          "stdout": "str[30000]",
+          "stderr": "str[0]",
+          "interrupted": "bool",
+          "isImage": "bool",
+          "noOutputExpected": "bool",
+          "persistedOutputPath": "str[186]",
+          "persistedOutputSize": "int"
+        },
+        "error": null
+      }
+    ]
+  }
+]
