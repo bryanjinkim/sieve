@@ -10,7 +10,13 @@ logs, test runs and whole files. Sieve sits between the tools and Claude and:
 - **Guards large file reads.** Instead of loading a 5,000-line file, Claude gets an outline and
   reads only the part it needs.
 - **Tracks a per-session token budget** and warns before you go over.
-- **Reports where tokens went** with `/sieve:report`.
+- **Reports where tokens went** with `/sieve:report` (add `--all` or `--days 7` for past sessions).
+- **Sends searches to a cheaper model.** The `sieve:scout` agent runs on Haiku in its own context
+  and returns only a short answer.
+- **Starts each session with five token-saving habits** (about 150 tokens).
+
+See [docs/recommended-settings.md](docs/recommended-settings.md) for built-in Claude Code limits
+that work well alongside Sieve.
 
 ## Layout
 
@@ -20,6 +26,8 @@ sieve/
 ├── sieve/                       Python library: all the logic, no Claude Code knowledge
 ├── scripts/                     thin hook adapters: JSON in → library → JSON out
 ├── hooks/hooks.json             which script runs on which Claude Code event
+├── agents/scout.md              cheap read-only search agent (Haiku)
+├── skills/report/SKILL.md       the /sieve:report command
 ├── config/default.json          default per-resource token budgets
 ├── tests/                       unit tests (python3 -m unittest)
 └── pyproject.toml               makes the library pip-installable on its own
@@ -33,10 +41,11 @@ over it is compressed to fit.
 | Setting | Default | What it limits |
 |---|---|---|
 | `budgets.bash_output` | 2500 | output of one shell command |
-| `budgets.grep_output` | 2500 | results of one search |
-| `budgets.mcp_output` | 4000 | output of one MCP (connected) tool call |
+| `budgets.grep_output` | 2500 | _planned:_ results of one search |
+| `budgets.mcp_output` | 4000 | _planned:_ output of one MCP (connected) tool call |
 | `budgets.file_read` | 10000 | a whole-file read; larger files get an outline instead |
 | `budgets.session_context` | 150000 | the whole conversation; Sieve warns at `session.warn_at` (80%) |
+| `session.tips` | true | add the five habits at session start |
 
 Override any of them in `~/.claude/sieve.json` (all projects) or `<project>/.claude/sieve.json`
 (one project). List only what you change:

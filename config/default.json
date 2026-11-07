@@ -17,7 +17,8 @@
   },
 
   "session": {
-    "warn_at": 0.8
+    "warn_at": 0.8,
+    "tips": true
   },
 
   "save_full_output": true,
