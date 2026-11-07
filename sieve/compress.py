@@ -139,7 +139,8 @@ _RULES = [
         r"\b(error|errors|exception|traceback|fatal|panic|failed|failure|"
         r"segmentation fault|undefined reference|cannot|could not|couldn't|"
         r"not found|no such file|permission denied|refused|aborted|timed? ?out)\b"
-        r"|^E\s|^FAIL\b|\bERR!|[✗✘❌]",
+        r"|^E\s|^FAIL\b|\bERR!|[✗✘❌]"
+        r"|\b[A-Z]\w*(Error|Exception)\b",  # ValueError, NullPointerException
         re.IGNORECASE,
     )),
     (8, re.compile(
@@ -168,33 +169,61 @@ def _omitted(count: int) -> str:
     return f"[... {count} lines omitted ...]"
 
 
+class LineCosts:
+    """Per-line token costs, computed once and reused by every stage.
+
+    Re-estimating the whole text after each stage meant several full passes
+    over a large log. Caching each line's cost and adding them up turns those
+    into dictionary lookups. Identical lines are only estimated once.
+    """
+
+    def __init__(self) -> None:
+        self._cache: dict = {}
+
+    def line(self, line: str) -> int:
+        cost = self._cache.get(line)
+        if cost is None:
+            cost = estimate_tokens(line) + 1  # +1 covers the newline
+            self._cache[line] = cost
+        return cost
+
+    def total(self, lines: List[str]) -> int:
+        return sum(self.line(line) for line in lines)
+
+
 def fit_to_budget(
     lines: List[str],
     budget: int,
     head: int = 15,
     tail: int = 40,
     context: int = 2,
+    head_tail_share: float = 0.5,
+    costs: LineCosts = None,
 ) -> List[str]:
     """Pick the lines to keep so the result fits ``budget`` tokens.
 
-    1. Always keep the first ``head`` lines (what command ran, how it started)
-       and the last ``tail`` lines (where summaries and final errors live).
+    1. Keep the first ``head`` lines (what command ran, how it started) and
+       the last ``tail`` lines (where summaries and final errors live), but
+       never let them take more than ``head_tail_share`` of the budget, so
+       important lines in the middle always have room.
     2. Rank every other line by importance score.
     3. Greedily add the best lines, each with ``context`` lines around it,
        while the total stays under budget.
     """
+    costs = costs or LineCosts()
     n = len(lines)
-    cost = [estimate_tokens(line) + 1 for line in lines]  # +1 for the newline
+    cost = [costs.line(line) for line in lines]
     marker_cost = estimate_tokens(_omitted(99999)) + 1
 
-    # If head + tail alone blow the budget, shrink them (tail keeps priority).
     def base_cost(h: int, t: int) -> int:
         idx = set(range(min(h, n))) | set(range(max(0, n - t), n))
         return sum(cost[i] for i in idx) + marker_cost
 
-    while (head > 3 or tail > 5) and base_cost(head, tail) > budget:
-        head = max(3, head * 2 // 3)
-        tail = max(5, tail * 2 // 3)
+    # Shrink head and tail until they fit their share (tail shrinks slower:
+    # the end of a log usually matters more than the start).
+    while (head > 0 or tail > 0) and base_cost(head, tail) > budget * head_tail_share:
+        head = head * 2 // 3
+        tail = tail * 3 // 4
 
     keep = set(range(min(head, n))) | set(range(max(0, n - tail), n))
     used = sum(cost[i] for i in keep)
@@ -255,35 +284,42 @@ def compress(
     max_line_chars: int = 400,
 ) -> CompressionResult:
     """Run the pipeline on ``text`` and return the result with stats."""
+    # The only full pass over the raw text; every later check uses the
+    # per-line cost cache, and exact estimates only run on small outputs.
     tokens_before = estimate_tokens(text)
     lines_before = text.count("\n") + 1 if text else 0
+
+    if tokens_before <= budget:
+        return CompressionResult(text, tokens_before, tokens_before,
+                                 lines_before, lines_before, [])
+
+    costs = LineCosts()
 
     def done(lines: List[str], stages: List[str]) -> CompressionResult:
         out = "\n".join(lines)
         return CompressionResult(out, tokens_before, estimate_tokens(out),
                                  lines_before, len(lines), stages)
 
-    if tokens_before <= budget:
-        return CompressionResult(text, tokens_before, tokens_before,
-                                 lines_before, lines_before, [])
+    def fits(lines: List[str]) -> bool:
+        # Cheap check first (sum of cached line costs, which runs slightly
+        # high), then an exact estimate only when the text is already small.
+        if costs.total(lines) > budget * 1.15:
+            return False
+        return estimate_tokens("\n".join(lines)) <= budget
 
     stages: List[str] = []
-    lines = clean(text)
-    stages.append("clean")
-    if estimate_tokens("\n".join(lines)) <= budget:
-        return done(lines, stages)
+    for name, stage in (
+        ("clean", None),
+        ("dedupe", dedupe),
+        ("clip", lambda ls: clip_long_lines(ls, max_line_chars)),
+    ):
+        lines = clean(text) if stage is None else stage(lines)
+        stages.append(name)
+        if fits(lines):
+            return done(lines, stages)
 
-    lines = dedupe(lines)
-    stages.append("dedupe")
-    if estimate_tokens("\n".join(lines)) <= budget:
-        return done(lines, stages)
-
-    lines = clip_long_lines(lines, max_line_chars)
-    stages.append("clip")
-    if estimate_tokens("\n".join(lines)) <= budget:
-        return done(lines, stages)
-
-    lines = fit_to_budget(lines, budget, head=head, tail=tail, context=context)
+    lines = fit_to_budget(lines, budget, head=head, tail=tail,
+                          context=context, costs=costs)
     stages.append("fit")
     result = done(lines, stages)
     if result.tokens_after > budget:
