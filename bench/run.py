@@ -52,6 +52,8 @@ TASKS = [
     },
 ]
 
+PLUGIN_DATA = os.path.expanduser("~/.claude/plugins/data/sieve-inline")
+
 ALLOWED_TOOLS = ["Bash(./build.sh)", "Bash(python3 -m unittest:*)", "Read", "Grep", "Glob"]
 
 
@@ -73,7 +75,7 @@ def run_one(claude: str, task: Dict[str, Any], arm: str, model: str, timeout: in
     env = dict(os.environ)
     if arm == "sieve":
         cmd += ["--plugin-dir", PLUGIN]
-        env["CLAUDE_PLUGIN_DATA"] = os.path.join(work, ".sieve-data")
+        env["SIEVE_DEBUG"] = "1"  # log each hook call's command and output size
     start = time.time()
     try:
         p = subprocess.run(cmd, cwd=work, env=env, capture_output=True, text=True, timeout=timeout)
@@ -98,8 +100,30 @@ def run_one(claude: str, task: Dict[str, Any], arm: str, model: str, timeout: in
         "is_error": bool(out.get("is_error")),
     }
     record["processed"] = record["input"] + record["cache_read"] + record["cache_write"]
-    ledger = os.path.join(work, ".sieve-data", "ledger.jsonl")
-    record["sieve_events"] = sum(1 for _ in open(ledger)) if os.path.exists(ledger) else 0
+    # Claude Code gives a --plugin-dir plugin its own data folder, so read
+    # Sieve's ledger and hook log from there, matched by this session's id.
+    session_id = out.get("session_id")
+    record["session_id"] = session_id
+    record["sieve_events"] = 0
+    record["hook_calls"] = []
+    if arm == "sieve" and session_id:
+        for name, key in (("ledger.jsonl", "sieve_events"), ("hooks.log", "hook_calls")):
+            path = os.path.join(PLUGIN_DATA, name)
+            if not os.path.exists(path):
+                continue
+            for line in open(path):
+                try:
+                    e = json.loads(line)
+                except ValueError:
+                    continue
+                if name == "ledger.jsonl" and e.get("session") == session_id:
+                    record["sieve_events"] += 1
+                elif name == "hooks.log" and (e.get("event") or {}).get("session_id") == session_id \
+                        and (e.get("event") or {}).get("tool_name"):
+                    ev = e["event"]
+                    record["hook_calls"].append(
+                        {"tool": ev.get("tool_name"), "command": ev.get("command"),
+                         "response": ev.get("tool_response"), "error": e.get("error")})
     shutil.rmtree(work, ignore_errors=True)
     return record
 

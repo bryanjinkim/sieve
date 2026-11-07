@@ -42,6 +42,9 @@ NOTE_RESERVE = 80
 # the errors, so it should survive intact).
 SMALL_STREAM_SHARE = 0.4
 
+# Largest saved-output file we'll read in full (bigger ones: use the preview).
+MAX_PERSISTED_BYTES = 20_000_000
+
 
 def split_budget(budget: int, out_tokens: int, err_tokens: int):
     """Decide how many tokens stdout and stderr may each use."""
@@ -68,6 +71,22 @@ def handle(event: Dict[str, Any], cfg: Config, data_root: str) -> Optional[Dict[
     if not isinstance(stdout, str) or not isinstance(stderr, str):
         return None
 
+    # When output is very large, Claude Code keeps only a preview (about
+    # 30,000 characters) in stdout and saves the full output to a file.
+    # Anything past the preview, like a warning near the end of a long build,
+    # would be invisible to Claude without extra turns spent reading that
+    # file. So compress the full saved output instead of the preview.
+    persisted = response.get("persistedOutputPath")
+    from_disk = False
+    if isinstance(persisted, str) and os.path.isfile(persisted):
+        try:
+            if os.path.getsize(persisted) <= MAX_PERSISTED_BYTES:
+                with open(persisted, encoding="utf-8", errors="replace") as f:
+                    stdout = f.read()
+                from_disk = True
+        except OSError:
+            pass
+
     budget = cfg.budget("bash_output")
     out_tokens, err_tokens = estimate_tokens(stdout), estimate_tokens(stderr)
     before = out_tokens + err_tokens
@@ -87,8 +106,8 @@ def handle(event: Dict[str, Any], cfg: Config, data_root: str) -> Optional[Dict[
 
     session = str(event.get("session_id", "unknown"))
     tool_use_id = str(event.get("tool_use_id", "unknown"))
-    saved_path = None
-    if cfg.save_full_output:
+    saved_path = persisted if from_disk else None  # Claude Code already saved it
+    if cfg.save_full_output and not saved_path:
         saved_path = ledger.save_full_output(
             data_root, session, tool_use_id,
             f"$ {command}\n\n--- stdout ---\n{stdout}\n\n--- stderr ---\n{stderr}\n")

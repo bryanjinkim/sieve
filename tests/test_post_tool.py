@@ -99,6 +99,27 @@ class HandleTest(unittest.TestCase):
         off = load_config(user_dir=os.path.join(self.tmp.name, "nouser"), env={"SIEVE_OFF": "1"})
         self.assertIsNone(self.handle(bash_event(stdout=self.big), cfg=off))
 
+    def test_compresses_the_full_saved_output_not_the_preview(self):
+        # Claude Code cut stdout to a 30,000-char preview and saved the rest;
+        # the warning is only in the saved file.
+        full = "\n".join(f"[build] step {i} ok" for i in range(5000))
+        full += "\nwarning: W221 unused import\nBuilt dist/app.whl (2.4 MB)"
+        path = os.path.join(self.tmp.name, "persisted.txt")
+        with open(path, "w") as f:
+            f.write(full)
+        event = bash_event(stdout=full[:30000], persistedOutputPath=path,
+                           persistedOutputSize=len(full))
+        updated = self.handle(event)["hookSpecificOutput"]["updatedToolOutput"]
+        self.assertIn("warning: W221 unused import", updated["stdout"])
+        self.assertIn("2.4 MB", updated["stdout"])
+        self.assertIn(path, updated["stdout"])  # points at Claude Code's copy
+        self.assertEqual(updated["persistedOutputPath"], path)
+        self.assertFalse(os.path.exists(os.path.join(self.data, "outputs")))  # no duplicate
+
+    def test_missing_saved_file_falls_back_to_the_preview(self):
+        event = bash_event(stdout=self.big, persistedOutputPath="/no/such/file")
+        self.assertIsNotNone(self.handle(event))
+
     def test_odd_input_is_ignored(self):
         self.assertIsNone(self.handle({"tool_name": "Bash"}))
         self.assertIsNone(self.handle({"tool_name": "Bash", "tool_response": "text"}))

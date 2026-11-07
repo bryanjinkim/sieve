@@ -27,3 +27,28 @@
 
 **Changes after run 1:** the tip now says to run commands once without tail/head and let Sieve
 compress. Hooks log errors (always) and call shapes (with `SIEVE_DEBUG=1`) to `hooks.log`.
+
+## Run 2: 2026-11-06, Sonnet, 12 sessions (`results/20261106-201542.json`)
+
+After changing the tip to "run once, without tail/head".
+
+| Task | Baseline | Sieve | Change | Turns (baseline → Sieve) | Correct |
+|---|---:|---:|---:|---|---|
+| build | 219k | 218k | **-1%** | 6, 7 → 6, 6 | 4/4 |
+| tests | 106k | 70k | **-34%** | 3, 3 → 2, 2 | 4/4 |
+| find | 69k | 70k | +1% | 2 → 2 | 4/4 |
+| **all three** | **394k** | **358k** | **-9%** | | 12/12 |
+
+Cost: $0.216 baseline vs $0.208 with Sieve (median per task, summed).
+
+**What the logs showed:**
+- **tests:** Claude ran the full command. Sieve compressed the 27,057-character output while keeping
+  `Ran 500 tests` and the skipped test, and Claude answered in one fewer turn.
+- **build:** Claude ran the full `./build.sh`, but Claude Code had already cut stdout to a
+  **30,000-character preview** and saved the full output to `persistedOutputPath`. Both warnings were
+  past the preview, so Claude still had to read the saved file.
+- **find:** Claude Grepped first, so the guard never fired. The 1% overhead is the session-start
+  tips and the scout description, re-read every turn.
+
+**Changes after run 2:** when `persistedOutputPath` is present, Sieve compresses the **full** saved
+output instead of the preview, and points Claude at Claude Code's own saved copy.
