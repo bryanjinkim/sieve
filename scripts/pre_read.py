@@ -155,14 +155,16 @@ def handle(event: Dict[str, Any], cfg: Config, data_root: str) -> Optional[Dict[
 
 
 def main() -> int:
+    event = None
     try:
         event = json.load(sys.stdin)
+        ledger.log_event("pre_read", event)
         project = os.environ.get("CLAUDE_PROJECT_DIR") or event.get("cwd")
         reply = handle(event, load_config(project_dir=project), ledger.data_dir())
         if reply:
             sys.stdout.write(json.dumps(reply))
-    except Exception:  # fail-open: never block a read because Sieve broke
-        pass
+    except Exception as exc:  # fail-open, but leave a trace
+        ledger.log_event("pre_read", event, exc)
     return 0
 
 

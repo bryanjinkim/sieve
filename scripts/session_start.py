@@ -18,13 +18,14 @@ from typing import Any, Dict, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from sieve import ledger  # noqa: E402
 from sieve.config import Config, load_config  # noqa: E402
 
 TIPS = """[sieve] Token-saving habits for this session:
 - Find before you read: Grep or Glob for what you need, then Read with offset/limit.
 - Don't re-read a file you've already read unless it has changed.
 - For broad read-only searches, delegate to the sieve:scout agent. It runs on a cheaper model and returns only a summary.
-- When you only need part of a command's output, use quiet flags (-q, --silent) or pipe through head, tail or grep.
+- Run commands once, without piping them through tail or head: Sieve compresses long output and keeps every error, warning and summary, so one full run is cheaper than several trimmed ones.
 - Keep replies concise: don't restate the question or repeat code the user already has."""
 
 
@@ -35,14 +36,16 @@ def handle(event: Dict[str, Any], cfg: Config) -> Optional[str]:
 
 
 def main() -> int:
+    event = None
     try:
         event = json.load(sys.stdin)
+        ledger.log_event("session_start", event)
         project = os.environ.get("CLAUDE_PROJECT_DIR") or event.get("cwd")
         text = handle(event, load_config(project_dir=project))
         if text:
             sys.stdout.write(text + "\n")
-    except Exception:  # fail-open
-        pass
+    except Exception as exc:  # fail-open, but leave a trace
+        ledger.log_event("session_start", event, exc)
     return 0
 
 

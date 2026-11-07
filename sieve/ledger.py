@@ -103,3 +103,36 @@ def read(root: str) -> Iterator[Dict[str, Any]]:
                     continue
     except FileNotFoundError:
         return
+
+
+def log_event(name: str, event: Any, error: Optional[BaseException] = None) -> None:
+    """Best-effort diagnostics for hook scripts, written to <data>/hooks.log.
+
+    Hooks fail open (they never break a session), but failing *silently*
+    makes problems invisible. Errors are always logged; set SIEVE_DEBUG=1 to
+    also log every hook call. The log is capped at ~1 MB.
+    """
+    try:
+        if error is None and os.environ.get("SIEVE_DEBUG") != "1":
+            return
+        path = os.path.join(data_dir(), "hooks.log")
+        if os.path.exists(path) and os.path.getsize(path) > 1_000_000:
+            os.replace(path, path + ".old")
+        summary = event if not isinstance(event, dict) else {
+            k: event.get(k) for k in ("hook_event_name", "tool_name", "session_id")}
+        if isinstance(event, dict) and isinstance(event.get("tool_response"), dict):
+            command = (event.get("tool_input") or {}).get("command")
+            if isinstance(command, str):
+                summary["command"] = command[:200]
+            # Shape only (field -> type and size), never the contents.
+            summary["tool_response"] = {
+                k: (f"str[{len(v)}]" if isinstance(v, str) else type(v).__name__)
+                for k, v in event["tool_response"].items()}
+        line = {"ts": round(time.time(), 3), "script": name, "event": summary}
+        if error is not None:
+            import traceback
+            line["error"] = "".join(traceback.format_exception(type(error), error, error.__traceback__))[-2000:]
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(line, default=str) + "\n")
+    except Exception:
+        pass
